@@ -1,4 +1,6 @@
 .DS_store
 kaggle/
 
-aitom/
+yolo_test/
+
+yolo11n.pt
