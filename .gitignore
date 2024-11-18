@@ -8,3 +8,7 @@ yolo11n.pt
 asciitree-0.3.3/
 
 model/
+
+datasets/
+runs/
+wandb/
