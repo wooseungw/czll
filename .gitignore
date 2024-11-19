@@ -12,3 +12,4 @@ model/
 datasets/
 runs/
 wandb/
+data.yaml
