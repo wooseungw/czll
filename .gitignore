@@ -4,6 +4,7 @@ kaggle/
 yolo_test/
 
 yolo11n.pt
+yolo11x.pt
 custom_yolo_unet.pt
 
 asciitree-0.3.3/
