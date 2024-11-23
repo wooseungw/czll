@@ -12,6 +12,7 @@ asciitree-0.3.3/
 model/
 
 datasets/
+data/
 runs/
 wandb/
 data.yaml
