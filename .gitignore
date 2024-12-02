@@ -12,6 +12,8 @@ asciitree-0.3.3/
 model/
 data_dicts.pkl
 
+CSA-Net/
+
 datasets/
 data/
 runs/
