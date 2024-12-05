@@ -10,6 +10,7 @@ custom_yolo_unet.pt
 asciitree-0.3.3/
 
 model/
+model_checkpoints/
 data_dicts.pkl
 
 CSANet/
