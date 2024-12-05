@@ -11,6 +11,9 @@ asciitree-0.3.3/
 
 model/
 model_checkpoints/
+visualization/
+test_results/
+
 data_dicts.pkl
 
 CSANet/
