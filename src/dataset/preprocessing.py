@@ -74,8 +74,8 @@ class Preprocessor:
                 np.save(label_path, segmentation)
 
                 # 저장된 파일 경로 출력
-                print(f"Saved image: {image_path}")
-                print(f"Saved label: {label_path}")
+                print(f"Saved: {image_path}")
+                
 
         # 저장된 파일의 개수 출력
         print(f"Number of files in train images: {len(list(train_image_dir.glob('*.npy')))}")
