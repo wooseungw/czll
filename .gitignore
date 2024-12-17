@@ -13,6 +13,7 @@ model/
 model_checkpoints/
 visualization/
 test_results/
+swin_unetr_btcv_segmentation/
 
 data_dicts.pkl
 
