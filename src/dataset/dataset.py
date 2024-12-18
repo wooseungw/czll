@@ -1,9 +1,10 @@
 from monai.transforms import (
     Compose, LoadImaged, EnsureChannelFirstd, NormalizeIntensityd,
     Orientationd, CropForegroundd, GaussianSmoothd, ScaleIntensityd,
-    RandSpatialCropd, RandRotate90d, RandFlipd, RandGaussianNoised,
+    RandSpatialCropd, RandRotate90d, RandFlipd, RandGaussianSmoothd,
     ToTensord, RandCropByLabelClassesd
 )
+
 from monai.data import Dataset, DataLoader, CacheDataset
 import os
 import numpy as np
@@ -70,15 +71,21 @@ if __name__ ==  "__main__":
     ])
     
     random_transforms = Compose([
+        GaussianSmoothd(
+        keys=["image"],      # 변환을 적용할 키
+        sigma=[1.0, 1.0, 1.0]  # 각 축(x, y, z)의 시그마 값
+        ),
         RandCropByLabelClassesd(
             keys=["image", "label"],
             label_key="label",
-            spatial_size=[3, 96, 96],
+            spatial_size=[96, 96, 96],
             num_classes=7,
             num_samples=8  # num_samples 값을 양의 정수로 설정
         ),
         RandRotate90d(keys=["image", "label"], prob=0.5, spatial_axes=[1,2]),
         RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=0),    
+        RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=1),    
+        RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=2),    
     ])
     
     train_loader, val_loader = create_dataloaders(train_img_dir, 
