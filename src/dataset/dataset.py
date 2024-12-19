@@ -19,6 +19,23 @@ def create_inference_dataloader(img_dir, label_dir, non_random_transforms=None, 
     
     return loader    
 
+def make_val_dataloader(img_dir, label_dir, non_random_transforms=None, random_transforms=None, batch_size=16, num_workers=4):
+    files = []
+    img_list = os.listdir(img_dir)
+    for name in img_list:
+        image = np.load(os.path.join(img_dir, f"{name}"))
+        label = np.load(os.path.join(label_dir, f"{name}"))
+
+        files.append({"image": image, "label": label})
+        
+    
+    
+    ds = CacheDataset(data=files, transform=non_random_transforms, cache_rate=1.0)
+    ds = Dataset(data=ds, transform=random_transforms)
+    loader = DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    
+    return loader
+
 def create_dataloaders(train_img_dir,
                        train_label_dir, 
                        val_img_dir, 
