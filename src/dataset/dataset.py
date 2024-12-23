@@ -21,7 +21,7 @@ def create_inference_dataloader(img_dir, label_dir, non_random_transforms=None, 
 
 def make_val_dataloader(img_dir, label_dir, non_random_transforms=None, random_transforms=None, batch_size=16, num_workers=4):
     files = []
-    img_list = os.listdir(img_dir)
+    img_list = [f for f in os.listdir(img_dir) if f.endswith('.npy')]
     for name in img_list:
         image = np.load(os.path.join(img_dir, f"{name}"))
         label = np.load(os.path.join(label_dir, f"{name}"))
@@ -46,8 +46,8 @@ def create_dataloaders(train_img_dir,
                        num_workers=4
                        ):
     
-    train_list = os.listdir(train_img_dir)
-    val_list = os.listdir(val_img_dir)
+    train_list = [f for f in os.listdir(train_img_dir) if f.endswith('.npy')]
+    val_list = [f for f in os.listdir(val_img_dir) if f.endswith('.npy')]
     train_files = []
     valid_files = []
     for name in train_list:
