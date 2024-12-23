@@ -8,6 +8,8 @@ from monai.transforms import (
 from monai.data import Dataset, DataLoader, CacheDataset
 import os
 import numpy as np
+import torch
+from torch.utils.data import Subset
 
 def create_inference_dataloader(img_dir, label_dir, non_random_transforms=None, random_transforms=None, batch_size=16, num_workers=4):
     data = []
@@ -19,7 +21,7 @@ def create_inference_dataloader(img_dir, label_dir, non_random_transforms=None, 
     
     return loader    
 
-def make_val_dataloader(img_dir, label_dir, non_random_transforms=None, random_transforms=None, batch_size=16, num_workers=4):
+def make_dataset(img_dir, label_dir, non_random_transforms=None, random_transforms=None):
     files = []
     img_list = [f for f in os.listdir(img_dir) if f.endswith('.npy')]
     for name in img_list:
@@ -28,11 +30,17 @@ def make_val_dataloader(img_dir, label_dir, non_random_transforms=None, random_t
 
         files.append({"image": image, "label": label})
         
-    
-    
     ds = CacheDataset(data=files, transform=non_random_transforms, cache_rate=1.0)
     ds = Dataset(data=ds, transform=random_transforms)
-    loader = DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    
+    return ds
+
+def make_dataloader(img_dir, label_dir, non_random_transforms=None, random_transforms=None, batch_size=16, num_workers=4,num_repeat=3):
+    
+    ds = make_dataset(img_dir, label_dir, non_random_transforms, random_transforms)
+    indices = torch.arange(len(ds)).repeat(num_repeat)  # 각 데이터를 3번 호출
+    subset = Subset(ds, indices)
+    loader = DataLoader(subset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     
     return loader
 
@@ -43,33 +51,12 @@ def create_dataloaders(train_img_dir,
                        non_random_transforms=None,
                        random_transforms=None,
                        batch_size=16,
-                       num_workers=4
+                       num_workers=4,
+                        train_num_repeat=3
                        ):
     
-    train_list = [f for f in os.listdir(train_img_dir) if f.endswith('.npy')]
-    val_list = [f for f in os.listdir(val_img_dir) if f.endswith('.npy')]
-    train_files = []
-    valid_files = []
-    for name in train_list:
-        image = np.load(os.path.join(train_img_dir, f"{name}"))    
-        label = np.load(os.path.join(train_label_dir, f"{name}"))
-
-        train_files.append({"image": image, "label": label})    
-
-    for name in val_list:
-        image = np.load(os.path.join(val_img_dir, f"{name}"))
-        label = np.load(os.path.join(val_label_dir, f"{name}"))
-
-        valid_files.append({"image": image, "label": label})
-
-    train_ds = CacheDataset(data=train_files, transform=non_random_transforms, cache_rate=1.0)
-    train_ds = Dataset(data=train_ds, transform=random_transforms)
-    
-    val_ds = CacheDataset(data=valid_files, transform=non_random_transforms, cache_rate=1.0)
-    val_ds = Dataset(data=val_ds, transform=random_transforms)
-    
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    train_loader = make_dataloader(train_img_dir, train_label_dir, non_random_transforms, random_transforms, batch_size, num_workers,train_num_repeat)
+    val_loader = make_dataloader(val_img_dir, val_label_dir, non_random_transforms, random_transforms, batch_size, num_workers)
     
     return train_loader, val_loader
 
