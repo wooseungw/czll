@@ -317,22 +317,18 @@ class SwinCSPUNETR(nn.Module):
         if not torch.jit.is_scripting() and not torch.jit.is_tracing():
             self._check_input_size(x_in.shape[2:])
         hidden_states_out = self.swinViT(x_in, self.normalize)
-        print(hidden_states_out[0].shape)
-        print(hidden_states_out[1].shape)
-        print(hidden_states_out[2].shape)
-        print(hidden_states_out[3].shape)
-        print(hidden_states_out[4].shape)
+        
         
         enc0 = self.encoder1(x_in)
-        print("enc0:",enc0.shape)
+        
         enc1 = self.encoder2(hidden_states_out[0])
-        print("enc1",enc1.shape)
+        
         enc2 = self.encoder3(hidden_states_out[1])
-        print(enc2.shape)
+        
         enc3 = self.encoder4(hidden_states_out[2])
-        print(enc3.shape)
+        
         dec4 = self.encoder10(hidden_states_out[4])
-        print(dec4.shape)
+        
         dec3 = self.decoder5(dec4, hidden_states_out[3])
         dec2 = self.decoder4(dec3, enc3)
         dec1 = self.decoder3(dec2, enc2)
