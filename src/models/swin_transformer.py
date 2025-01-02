@@ -31,7 +31,6 @@ from monai.utils.deprecate_utils import deprecated_arg
 rearrange, _ = optional_import("einops", name="rearrange")
 
 __all__ = [
-    "SwinUNETR",
     "window_partition",
     "window_reverse",
     "WindowAttention",
@@ -42,10 +41,6 @@ __all__ = [
     "BasicLayer",
     "SwinTransformer",
 ]
-
-
-
-
 
 def window_partition(x, window_size):
     """window partition operation based on: "Liu et al.,
