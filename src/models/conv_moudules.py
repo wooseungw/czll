@@ -74,11 +74,11 @@ def get_output_padding(
     return out_padding if len(out_padding) > 1 else out_padding[0]
 
 class Bottleneck(nn.Module):
-    def __init__(self, c1, c2, shortcut=True, g=1, k=(3, 3), e=0.5):
+    def __init__(self, c1, c2, norm_name, act_name, shortcut=True, g=1, k=(3, 3), e=0.5):
         super().__init__()
         c_ = int(c2 * e)  
-        self.cv1 = get_conv_layer(3, c1, c_, kernel_size=k[0], stride=1, norm="batch", act="relu") # spatial_dims를 3으로 변경
-        self.cv2 = get_conv_layer(3, c_, c2, kernel_size=k[1], stride=1, norm="batch", act="relu", bias=False)
+        self.cv1 = get_conv_layer(3, c1, c_, kernel_size=k[0], stride=1, norm=norm_name, act=act_name) # spatial_dims를 3으로 변경
+        self.cv2 = get_conv_layer(3, c_, c2, kernel_size=k[1], stride=1, norm=norm_name, act=act_name, bias=False)
         self.add = shortcut and c1 == c2
 
     def forward(self, x):
@@ -123,7 +123,7 @@ class CSPBlock(nn.Module):
                 norm=norm_name,
                 act=act_name,
             ),
-            *[Bottleneck(c1=self.split_channels, c2=self.split_channels, shortcut=True) for _ in range(n)]  # n번 반복
+            *[Bottleneck(c1=self.split_channels, c2=self.split_channels, norm_name=norm_name, act_name=act_name, shortcut=True) for _ in range(n)]  # n번 반복
         )
         
         # Second branch: conv1x1
