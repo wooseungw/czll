@@ -16,11 +16,13 @@ from monai.networks.blocks import MLPBlock as Mlp
 from monai.networks.layers import DropPath, trunc_normal_
 from monai.utils import ensure_tuple_rep, look_up_option, optional_import
 from monai.utils.deprecate_utils import deprecated_arg
+from monai.networks.blocks import PatchEmbed, UnetOutBlock, UnetrUpBlock
 
-from models.swin_transformer import SwinTransformer, MERGING_MODE
-from models.conv_moudules import UnetrBasicBlock, UnetrUpBlock, UnetOutBlock
+from .swin_transformer import SwinTransformer, MERGING_MODE
+from .conv_moudules import CSPBlock, UPCSPBlock
 
-class SwinUNETR(nn.Module):
+
+class SwinCSPUNETR(nn.Module):
     """
     Swin UNETR based on: "Hatamizadeh et al.,
     Swin UNETR: Swin Transformers for Semantic Segmentation of Brain Tumors in MRI Images
@@ -53,6 +55,7 @@ class SwinUNETR(nn.Module):
         spatial_dims: int = 3,
         downsample="merging",
         use_v2=False,
+        n=2
     ) -> None:
         """
         Args:
@@ -134,103 +137,118 @@ class SwinUNETR(nn.Module):
             use_v2=use_v2,
         )
 
-        self.encoder1 = UnetrBasicBlock(
+        self.encoder1 = CSPBlock(
             spatial_dims=spatial_dims,
             in_channels=in_channels,
             out_channels=feature_size,
             kernel_size=3,
             stride=1,
             norm_name=norm_name,
-            res_block=True,
+            act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
+            dropout=None,
+            split_ratio=0.5,
+            n=n
         )
 
-        self.encoder2 = UnetrBasicBlock(
+        self.encoder2 = CSPBlock(
             spatial_dims=spatial_dims,
             in_channels=feature_size,
             out_channels=feature_size,
             kernel_size=3,
             stride=1,
             norm_name=norm_name,
-            res_block=True,
+            act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
+            dropout=None,
+            split_ratio=0.5,
+            n=n
         )
 
-        self.encoder3 = UnetrBasicBlock(
+        self.encoder3 = CSPBlock(
             spatial_dims=spatial_dims,
             in_channels=2 * feature_size,
             out_channels=2 * feature_size,
             kernel_size=3,
             stride=1,
             norm_name=norm_name,
-            res_block=True,
+            act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
+            dropout=None,
+            split_ratio=0.5,
+            n=n
         )
 
-        self.encoder4 = UnetrBasicBlock(
+        self.encoder4 = CSPBlock(
             spatial_dims=spatial_dims,
             in_channels=4 * feature_size,
             out_channels=4 * feature_size,
             kernel_size=3,
             stride=1,
             norm_name=norm_name,
-            res_block=True,
+            act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
+            dropout=None,
+            split_ratio=0.5,
+            n=n
         )
 
-        self.encoder10 = UnetrBasicBlock(
+        self.encoder10 = CSPBlock(
             spatial_dims=spatial_dims,
             in_channels=16 * feature_size,
             out_channels=16 * feature_size,
             kernel_size=3,
             stride=1,
             norm_name=norm_name,
-            res_block=True,
+            act_name=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
+            dropout=None,
+            split_ratio=0.5,
+            n=n
         )
 
-        self.decoder5 = UnetrUpBlock(
+        self.decoder5 = UPCSPBlock(
             spatial_dims=spatial_dims,
             in_channels=16 * feature_size,
             out_channels=8 * feature_size,
             kernel_size=3,
             upsample_kernel_size=2,
             norm_name=norm_name,
-            res_block=True,
+            n=n
         )
 
-        self.decoder4 = UnetrUpBlock(
+        self.decoder4 = UPCSPBlock(
             spatial_dims=spatial_dims,
             in_channels=feature_size * 8,
             out_channels=feature_size * 4,
             kernel_size=3,
             upsample_kernel_size=2,
             norm_name=norm_name,
-            res_block=True,
+            n=n
         )
 
-        self.decoder3 = UnetrUpBlock(
+        self.decoder3 = UPCSPBlock(
             spatial_dims=spatial_dims,
             in_channels=feature_size * 4,
             out_channels=feature_size * 2,
             kernel_size=3,
             upsample_kernel_size=2,
             norm_name=norm_name,
-            res_block=True,
+            n=n
         )
-        self.decoder2 = UnetrUpBlock(
+        self.decoder2 = UPCSPBlock(
             spatial_dims=spatial_dims,
             in_channels=feature_size * 2,
             out_channels=feature_size,
             kernel_size=3,
             upsample_kernel_size=2,
             norm_name=norm_name,
-            res_block=True,
+            n=n
         )
 
-        self.decoder1 = UnetrUpBlock(
+        self.decoder1 = UPCSPBlock(
             spatial_dims=spatial_dims,
             in_channels=feature_size,
             out_channels=feature_size,
             kernel_size=3,
             upsample_kernel_size=2,
             norm_name=norm_name,
-            res_block=True,
+            n=n
         )
 
         self.out = UnetOutBlock(spatial_dims=spatial_dims, in_channels=feature_size, out_channels=out_channels)
