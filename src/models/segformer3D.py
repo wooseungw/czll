@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 from einops import rearrange, reduce
 from einops.layers.torch import Rearrange
-from torchprofile import profile_macs
+# from torchprofile import profile_macs
 
 from monai.networks.blocks.convolutions import Convolution
 from collections.abc import Sequence
