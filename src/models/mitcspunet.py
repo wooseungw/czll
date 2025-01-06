@@ -173,9 +173,9 @@ class MiTCSPUnet(nn.Module):
     def forward(self, x):
         # Extract features from MiT3D
         hidden_states_out = self.mit(x, return_layer_outputs=True)
-        print(len(hidden_states_out))
-        for i in range(len(hidden_states_out)):
-            print(hidden_states_out[i].shape)
+        # print(len(hidden_states_out))
+        # for i in range(len(hidden_states_out)):
+        #     print(hidden_states_out[i].shape)
         enc0 = self.encoder1(hidden_states_out[0])
         
         enc1 = self.encoder2(hidden_states_out[1])
