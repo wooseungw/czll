@@ -3,3 +3,4 @@ from .conv_moudules import UnetResBlock, CSPBlock
 from .swincspunetr import SwinCSPUNETR
 from .swincspunetr_unet import SwinCSPUNETR_unet
 from .swincspunetr3plus import SwinCSPUNETR3plus
+from .mitcspunet import MiTCSPUnet
