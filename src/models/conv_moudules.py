@@ -12,6 +12,7 @@ from monai.networks.layers.utils import get_act_layer, get_norm_layer
 
 from monai.networks.blocks import UnetResBlock
 
+import torch.nn.functional as F
 
 
 def get_conv_layer(
@@ -215,6 +216,75 @@ class UPCSPBlock(nn.Module):
         out = self.conv_block(out)
         return out
 
+class UPCSPBlock3plus(nn.Module):
+    """
+    An upsampling module that can be used for UNETR: "Hatamizadeh et al.,
+    UNETR: Transformers for 3D Medical Image Segmentation <https://arxiv.org/abs/2103.10504>"
+    """
+
+    def __init__(
+        self,
+        spatial_dims: int,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Sequence[int] | int,
+        upsample_kernel_size: Sequence[int] | int,
+        norm_name: tuple | str,
+        n=2
+    ) -> None:
+        """
+        Args:
+            spatial_dims: number of spatial dimensions.
+            in_channels: number of input channels.
+            out_channels: number of output channels.
+            kernel_size: convolution kernel size.
+            upsample_kernel_size: convolution kernel size for transposed convolution layers.
+            norm_name: feature normalization type and arguments.
+            res_block: bool argument to determine if residual block is used.
+
+        """
+
+        super().__init__()
+        # upsample_stride = upsample_kernel_size
+        # self.transp_convs = get_conv_layer(
+        #         spatial_dims,
+        #         out_channels*(2**n),
+        #         out_channels,
+        #         kernel_size=upsample_kernel_size,
+        #         stride=upsample_stride,
+        #         conv_only=True,
+        #         is_transposed=True,
+        #     )
+
+        self.conv_block = CSPBlock(
+            spatial_dims,
+            in_channels,
+            out_channels,
+            kernel_size=kernel_size,
+            stride=1,
+            norm_name=norm_name,
+            n=n
+        )
+        
+    def forward(self, inp, skip, skip2, skip3, skip4):
+        # number of channels for skip should equals to out_channels
+        # out = self.transp_conv(inp)
+        out = torch.cat((inp, skip, skip2, skip3, skip4), dim=1)
+        out = self.conv_block(out)
+        return out
+
+class Upsample3D(nn.Module):
+    def __init__(self, scale_factor=2, mode='trilinear', align_corners=True):
+        super().__init__()
+        self.scale_factor = scale_factor
+        
+    def forward(self, x):
+        return F.interpolate(
+            x, 
+            scale_factor=self.scale_factor, 
+            mode='trilinear', 
+            align_corners=True
+        )
 
 class UnetResBlock(nn.Module):
     """
