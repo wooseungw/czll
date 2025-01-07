@@ -4,3 +4,4 @@ from .swincspunetr import SwinCSPUNETR
 from .swincspunetr_unet import SwinCSPUNETR_unet
 from .swincspunetr3plus import SwinCSPUNETR3plus
 from .mitcspunet import MiTCSPUnet, MiTUnet
+from .defomer_lka import D_LKA_Net
