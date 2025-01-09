@@ -16,6 +16,8 @@ test_results/
 swin_unetr_btcv_segmentation/
 renalStructures_UNEST_segmentation/
 
+log/
+
 data_dicts.pkl
 
 CSANet/
