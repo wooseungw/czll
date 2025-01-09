@@ -277,13 +277,15 @@ class Upsample3D(nn.Module):
     def __init__(self, scale_factor=2, mode='trilinear', align_corners=True):
         super().__init__()
         self.scale_factor = scale_factor
+        self.mode = mode
+        self.align_corners = align_corners
         
     def forward(self, x):
         return F.interpolate(
             x, 
             scale_factor=self.scale_factor, 
-            mode='trilinear', 
-            align_corners=True
+            mode=self.mode, 
+            align_corners=self.align_corners
         )
 
 class UnetResBlock(nn.Module):

@@ -203,7 +203,7 @@ class SwinCSPUNETR3plus(nn.Module):
         )
         '''hidden stage 1'''
         self.s1_hd4 = nn.Sequential(
-            Upsample3D(scale_factor=2, mode='trilinear', align_corners=True),
+            Upsample3D(scale_factor=2, mode='trilinear', align_corners=False),
             get_conv_layer(
                 spatial_dims,
                 feature_size*16,
@@ -258,7 +258,7 @@ class SwinCSPUNETR3plus(nn.Module):
             ))
         '''hidden stage 2'''
         self.s2_hd4 = nn.Sequential(
-            Upsample3D(scale_factor=4, mode='trilinear', align_corners=True),
+            Upsample3D(scale_factor=4, mode='trilinear', align_corners=False),
             get_conv_layer(
                 spatial_dims,
                 feature_size*16,
@@ -269,7 +269,7 @@ class SwinCSPUNETR3plus(nn.Module):
                 act=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
             ))
         self.s2_hd3 = nn.Sequential(
-            Upsample3D(scale_factor=2, mode='trilinear', align_corners=True),
+            Upsample3D(scale_factor=2, mode='trilinear', align_corners=False),
             get_conv_layer(
                 spatial_dims,
                 feature_size*5,
@@ -313,7 +313,7 @@ class SwinCSPUNETR3plus(nn.Module):
             ))
         '''hidden stage 3'''
         self.s3_hd4 = nn.Sequential(
-            Upsample3D(scale_factor=8, mode='trilinear', align_corners=True),
+            Upsample3D(scale_factor=8, mode='trilinear', align_corners=False),
             get_conv_layer(
                 spatial_dims,
                 feature_size*16,
@@ -324,7 +324,7 @@ class SwinCSPUNETR3plus(nn.Module):
                 act=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
             ))
         self.s3_hd3 = nn.Sequential(
-            Upsample3D(scale_factor=4, mode='trilinear', align_corners=True),
+            Upsample3D(scale_factor=4, mode='trilinear', align_corners=False),
             get_conv_layer(
                 spatial_dims,
                 feature_size*5,
@@ -335,7 +335,7 @@ class SwinCSPUNETR3plus(nn.Module):
                 act=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
             ))
         self.s3_hd2 = nn.Sequential(
-            Upsample3D(scale_factor=2, mode='trilinear', align_corners=True),
+            Upsample3D(scale_factor=2, mode='trilinear', align_corners=False),
             get_conv_layer(
                 spatial_dims,
                 feature_size*5,
@@ -368,7 +368,7 @@ class SwinCSPUNETR3plus(nn.Module):
             ))
         '''hidden stage 4'''
         self.s4_hd4 = nn.Sequential(
-            Upsample3D(scale_factor=16, mode='trilinear', align_corners=True),
+            Upsample3D(scale_factor=16, mode='trilinear', align_corners=False),
             get_conv_layer(
                 spatial_dims,
                 feature_size*16,
@@ -379,7 +379,7 @@ class SwinCSPUNETR3plus(nn.Module):
                 act=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
             ))
         self.s4_hd3 = nn.Sequential(
-            Upsample3D(scale_factor=8, mode='trilinear', align_corners=True),
+            Upsample3D(scale_factor=8, mode='trilinear', align_corners=False),
             get_conv_layer(
                 spatial_dims,
                 feature_size*5,
@@ -390,7 +390,7 @@ class SwinCSPUNETR3plus(nn.Module):
                 act=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
             ))
         self.s4_hd2 = nn.Sequential(
-            Upsample3D(scale_factor=4, mode='trilinear', align_corners=True),
+            Upsample3D(scale_factor=4, mode='trilinear', align_corners=False),
             get_conv_layer(
                 spatial_dims,
                 feature_size*5,
@@ -401,7 +401,7 @@ class SwinCSPUNETR3plus(nn.Module):
                 act=("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
             ))
         self.s4_hd1 = nn.Sequential(
-            Upsample3D(scale_factor=2, mode='trilinear', align_corners=True),
+            Upsample3D(scale_factor=2, mode='trilinear', align_corners=False),
             get_conv_layer(
                 spatial_dims,
                 feature_size*5,
