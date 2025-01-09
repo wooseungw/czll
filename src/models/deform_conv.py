@@ -1,4 +1,8 @@
-
+#from deform_conv_func import DeformConvFunction
+#!/usr/bin/env python
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
 
 import torch
 import math
@@ -6,11 +10,7 @@ from torch import nn
 from torch.nn import init
 from torch.nn.modules.utils import _triple
 
-#from deform_conv_func import DeformConvFunction
-#!/usr/bin/env python
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
+
 
 import math
 import torch
