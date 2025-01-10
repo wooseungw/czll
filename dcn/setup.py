@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 
 import os
-os.environ['TORCH_CUDA_ARCH_LIST'] = '8.9'
-os.environ["CUDA_HOME"] = "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4"
-os.environ["PATH"] = "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/bin;" + os.environ["PATH"]
 
 import glob
 
@@ -66,10 +63,10 @@ setup(
     name="D3D",
     version="1.0",
     author="yingxinyi",
-    url="https://github.com/XinyiYing/D3Dnet",
+    #url="https://github.com/XinyiYing/D3Dnet",
     description="Deformable 3D Convolutional Network",
     packages=find_packages(exclude=("configs", "tests",)),
-    # install_requires=requirements,
+    install_requires=requirements,
     ext_modules=get_extensions(),
     cmdclass={"build_ext": torch.utils.cpp_extension.BuildExtension},
 )
