@@ -31,7 +31,7 @@ class LayerNorm(nn.Module):
 import torch.nn as nn
 import torch
 from monai.networks.blocks.dynunet_block import UnetResBlock
-from .conv_moudules import get_conv_layer
+from conv_moudules import get_conv_layer
 ###################################################
 # Model Components
 ###################################################
@@ -605,7 +605,7 @@ class TransformerBlock_2Dsingle(nn.Module):
 # 3D LKA with one deform conv
 # 
 #########################
-from .deform_conv import DeformConvPack, DeformConvPack_Depth
+from deform_conv import DeformConvPack, DeformConvPack_Depth
 
 class TransformerBlock_3D_single_deform_LKA(nn.Module):
     """

@@ -1,13 +1,5 @@
 # Copyright (c) MONAI Consortium
 # Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 from __future__ import annotations
 
@@ -17,16 +9,19 @@ from collections.abc import Sequence
 import torch
 import torch.nn as nn
 
-from monai.networks.blocks.convolutions import Convolution, ResidualUnit
+# 불필요한 import 제거
+# from monai.networks.blocks.convolutions import Convolution, ResidualUnit
+# from monai.networks.layers.simplelayers import SkipConnection
 from monai.networks.layers.factories import Act, Norm
-from monai.networks.layers.simplelayers import SkipConnection
 
-__all__ = ["UNet", "Unet"]
+from conv_moudules import get_conv_layer, get_norm_layer, get_act_layer
+from unet_block import Encoder, Decoder
+
+__all__ = ["UNet"]  # "Unet" 제거
+
 
 
 class UNet(nn.Module):
-   
-
     def __init__(
         self,
         spatial_dims: int,
@@ -36,7 +31,6 @@ class UNet(nn.Module):
         strides: Sequence[int],
         kernel_size: Sequence[int] | int = 3,
         up_kernel_size: Sequence[int] | int = 3,
-        num_res_units: int = 0,
         act: tuple | str = Act.PRELU,
         norm: tuple | str = Norm.INSTANCE,
         dropout: float = 0.0,
@@ -47,11 +41,14 @@ class UNet(nn.Module):
 
         if len(channels) < 2:
             raise ValueError("the length of `channels` should be no less than 2.")
+        
+        # 기존 코드와 동일한 검사
         delta = len(strides) - (len(channels) - 1)
         if delta < 0:
-            raise ValueError("the length of `strides` should equal to `len(channels) - 1`.")
+            raise ValueError("the length of `strides` should equal `len(channels) - 1`.")
         if delta > 0:
             warnings.warn(f"`len(strides) > len(channels) - 1`, the last {delta} values of strides will not be used.")
+        
         if isinstance(kernel_size, Sequence) and len(kernel_size) != spatial_dims:
             raise ValueError("the length of `kernel_size` should equal to `dimensions`.")
         if isinstance(up_kernel_size, Sequence) and len(up_kernel_size) != spatial_dims:
@@ -64,162 +61,129 @@ class UNet(nn.Module):
         self.strides = strides
         self.kernel_size = kernel_size
         self.up_kernel_size = up_kernel_size
-        self.num_res_units = num_res_units
         self.act = act
         self.norm = norm
         self.dropout = dropout
         self.bias = bias
         self.adn_ordering = adn_ordering
 
-        def _create_block(
-            inc: int, outc: int, channels: Sequence[int], strides: Sequence[int], is_top: bool
-        ) -> nn.Module:
-            """
-            Builds the UNet structure from the bottom up by recursing down to the bottom block, then creating sequential
-            blocks containing the downsample path, a skip connection around the previous block, and the upsample path.
-
-            Args:
-                inc: number of input channels.
-                outc: number of output channels.
-                channels: sequence of channels. Top block first.
-                strides: convolution stride.
-                is_top: True if this is the top block.
-            """
-            c = channels[0]
-            s = strides[0]
-
-            subblock: nn.Module
-
-            if len(channels) > 2:
-                subblock = _create_block(c, c, channels[1:], strides[1:], False)  # continue recursion down
-                upc = c * 2
-            else:
-                # the next layer is the bottom so stop recursion, create the bottom layer as the sublock for this layer
-                subblock = self._get_bottom_layer(c, channels[1])
-                upc = c + channels[1]
-
-            down = self._get_down_layer(inc, c, s, is_top)  # create layer in downsampling path
-            up = self._get_up_layer(upc, outc, s, is_top)  # create layer in upsampling path
-
-            return self._get_connection_block(down, up, subblock)
-
-        self.model = _create_block(in_channels, out_channels, self.channels, self.strides, True)
-
-    def _get_connection_block(self, down_path: nn.Module, up_path: nn.Module, subblock: nn.Module) -> nn.Module:
-        """
-        Returns the block object defining a layer of the UNet structure including the implementation of the skip
-        between encoding (down) and decoding (up) sides of the network.
-
-        Args:
-            down_path: encoding half of the layer
-            up_path: decoding half of the layer
-            subblock: block defining the next layer in the network.
-        Returns: block for this layer: `nn.Sequential(down_path, SkipConnection(subblock), up_path)`
-        """
-        return nn.Sequential(down_path, SkipConnection(subblock), up_path)
-
-    def _get_down_layer(self, in_channels: int, out_channels: int, strides: int, is_top: bool) -> nn.Module:
-        """
-        Returns the encoding (down) part of a layer of the network. This typically will downsample data at some point
-        in its structure. Its output is used as input to the next layer down and is concatenated with output from the
-        next layer to form the input for the decode (up) part of the layer.
-
-        Args:
-            in_channels: number of input channels.
-            out_channels: number of output channels.
-            strides: convolution stride.
-            is_top: True if this is the top block.
-        """
-        mod: nn.Module
-        if self.num_res_units > 0:
-            mod = ResidualUnit(
-                self.dimensions,
-                in_channels,
-                out_channels,
-                strides=strides,
-                kernel_size=self.kernel_size,
-                subunits=self.num_res_units,
-                act=self.act,
-                norm=self.norm,
-                dropout=self.dropout,
-                bias=self.bias,
-                adn_ordering=self.adn_ordering,
-            )
-            return mod
-        mod = Convolution(
-            self.dimensions,
+        # ---------------------
+        # Encoder
+        # ---------------------
+        self.encoder1 = Encoder(
+            spatial_dims,
             in_channels,
-            out_channels,
-            strides=strides,
-            kernel_size=self.kernel_size,
-            act=self.act,
-            norm=self.norm,
-            dropout=self.dropout,
-            bias=self.bias,
-            adn_ordering=self.adn_ordering,
+            channels[0],
+            kernel_size,
+            strides[0],
+            norm,
+            act,
+            dropout,
         )
-        return mod
-
-    def _get_bottom_layer(self, in_channels: int, out_channels: int) -> nn.Module:
-        """
-        Returns the bottom or bottleneck layer at the bottom of the network linking encode to decode halves.
-
-        Args:
-            in_channels: number of input channels.
-            out_channels: number of output channels.
-        """
-        return self._get_down_layer(in_channels, out_channels, 1, False)
-
-    def _get_up_layer(self, in_channels: int, out_channels: int, strides: int, is_top: bool) -> nn.Module:
-        """
-        Returns the decoding (up) part of a layer of the network. This typically will upsample data at some point
-        in its structure. Its output is used as input to the next layer up.
-
-        Args:
-            in_channels: number of input channels.
-            out_channels: number of output channels.
-            strides: convolution stride.
-            is_top: True if this is the top block.
-        """
-        conv: Convolution | nn.Sequential
-
-        conv = Convolution(
-            self.dimensions,
-            in_channels,
-            out_channels,
-            strides=strides,
-            kernel_size=self.up_kernel_size,
-            act=self.act,
-            norm=self.norm,
-            dropout=self.dropout,
-            bias=self.bias,
-            conv_only=is_top and self.num_res_units == 0,
-            is_transposed=True,
-            adn_ordering=self.adn_ordering,
+        self.encoder2 = Encoder(
+            spatial_dims,
+            channels[0],
+            channels[1],
+            kernel_size,
+            strides[1],
+            norm,
+            act,
+            dropout,
+        )
+        self.encoder3 = Encoder(
+            spatial_dims,
+            channels[1],
+            channels[2],
+            kernel_size,
+            strides[2],
+            norm,
+            act,
+            dropout,
+        )
+        # encoder4는 strides[3]를 사용할 수 있도록 strides에 4개 값을 넣어주거나, 아래처럼 stride=1로 따로 설정 가능
+        # 여기서는 strides에 4개 값을 넣어준다고 가정함
+        self.encoder4 = Encoder(
+            spatial_dims,
+            channels[2],
+            channels[3],
+            kernel_size,
+            1, 
+            norm,
+            act,
+            dropout,
         )
 
-        if self.num_res_units > 0:
-            ru = ResidualUnit(
-                self.dimensions,
-                out_channels,
-                out_channels,
-                strides=1,
-                kernel_size=self.kernel_size,
-                subunits=1,
-                act=self.act,
-                norm=self.norm,
-                dropout=self.dropout,
-                bias=self.bias,
-                last_conv_only=is_top,
-                adn_ordering=self.adn_ordering,
-            )
-            conv = nn.Sequential(conv, ru)
+        # ---------------------
+        # Decoder
+        # ---------------------
+        self.decoder3 = Decoder(
+            spatial_dims,
+            channels[3] + channels[2],
+            channels[2],
+            up_kernel_size,
+            strides[2],
+            norm,
+            act,
+            dropout,
+        )
+        self.decoder2 = Decoder(
+            spatial_dims,
+            channels[2] + channels[1],
+            channels[1],
+            up_kernel_size,
+            strides[1],
+            norm,
+            act,
+            dropout,
+        )
+        self.decoder1 = Decoder(
+            spatial_dims,
+            channels[1] + channels[0],
+            channels[0],
+            up_kernel_size,
+            strides[0],
+            norm,
+            act,
+            dropout,
+        )
 
-        return conv
+        # 마지막 출력
+        self.out = get_conv_layer(
+            spatial_dims,
+            channels[0],
+            out_channels,
+            kernel_size=1,
+            stride=1,
+            dropout=dropout,
+            bias=bias,
+            conv_only=True,
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.model(x)
+        x1 = self.encoder1(x)
+        x2 = self.encoder2(x1)
+        x3 = self.encoder3(x2)
+        x4 = self.encoder4(x3)
+
+        x = self.decoder3(x4, x3)
+        x = self.decoder2(x, x2)
+        x = self.decoder1(x, x1)
+        x = self.out(x)
         return x
 
 
-Unet = UNet
+if __name__ == "__main__":
+    # strides를 4개로 늘림
+    net = UNet(
+        spatial_dims=3,
+        in_channels=1,
+        out_channels=7,
+        channels=(16, 32, 64, 128),
+        strides=(2, 2, 2),  # 4개의 stride
+    )
+    print(net)
+
+    input_tensor = torch.randn((1, 1, 64, 64, 64))
+    with torch.no_grad():
+        out = net(input_tensor)
+    print("Output shape:", out.shape)

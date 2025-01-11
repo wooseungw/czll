@@ -2,8 +2,8 @@ from torch import nn
 from typing import Tuple, Union
 
 from monai.networks.blocks.dynunet_block import UnetOutBlock, UnetResBlock
-from .deformer_lka_blocks import D_LKA_NetEncoder, D_LKA_NetUpBlock
-from .deformer_lka_blocks import TransformerBlock, TransformerBlock_LKA_Channel, TransformerBlock_SE, TransformerBlock_3D_LKA, TransformerBlock_Deform_LKA_Channel, TransformerBlock_Deform_LKA_Channel_sequential, TransformerBlock_3D_LKA_3D_conv, TransformerBlock_LKA_Channel_norm, TransformerBlock_LKA_Spatial, TransformerBlock_Deform_LKA_Spatial_sequential, TransformerBlock_Deform_LKA_Spatial, TransformerBlock_3D_single_deform_LKA
+from deformer_lka_blocks_kaggle import D_LKA_NetEncoder, D_LKA_NetUpBlock
+from deformer_lka_blocks_kaggle import TransformerBlock, TransformerBlock_LKA_Channel, TransformerBlock_SE, TransformerBlock_3D_LKA, TransformerBlock_Deform_LKA_Channel, TransformerBlock_Deform_LKA_Channel_sequential, TransformerBlock_3D_LKA_3D_conv, TransformerBlock_LKA_Channel_norm, TransformerBlock_LKA_Spatial, TransformerBlock_Deform_LKA_Spatial_sequential, TransformerBlock_Deform_LKA_Spatial, TransformerBlock_3D_single_deform_LKA
 
 '''
 @article{azad2023beyond,
@@ -13,7 +13,7 @@ from .deformer_lka_blocks import TransformerBlock, TransformerBlock_LKA_Channel,
   year={2023}
 }
 '''
-class D_LKA_Net(nn.Module):
+class D_LKA_Net_kaggle(nn.Module):
     """
     3D D-LKA Net for pancreas segmentation
     """
