@@ -102,7 +102,7 @@ class UNet(nn.Module):
         )
         # encoder4는 strides[3]를 사용할 수 있도록 strides에 4개 값을 넣어주거나, 아래처럼 stride=1로 따로 설정 가능
         # 여기서는 strides에 4개 값을 넣어준다고 가정함
-        self.encoder4 = Encoder(
+        self.bottleneck = Encoder(
             spatial_dims,
             channels[2],
             channels[3],
@@ -163,7 +163,8 @@ class UNet(nn.Module):
         x1 = self.encoder1(x)
         x2 = self.encoder2(x1)
         x3 = self.encoder3(x2)
-        x4 = self.encoder4(x3)
+        
+        x4 = self.bottleneck(x3)
 
         x = self.decoder3(x4, x3)
         x = self.decoder2(x, x2)
