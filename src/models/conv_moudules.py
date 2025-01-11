@@ -14,7 +14,6 @@ from monai.networks.blocks import UnetResBlock
 
 import torch.nn.functional as F
 
-
 def get_conv_layer(
     spatial_dims: int,
     in_channels: int,
