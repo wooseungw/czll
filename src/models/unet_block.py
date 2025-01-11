@@ -22,7 +22,7 @@ def get_conv_layer(
     act: tuple | str | None = Act.PRELU,
     norm: tuple | str | None = Norm.INSTANCE,
     dropout: tuple | str | float | None = None,
-    bias: bool = False,
+    bias: bool = True,
     conv_only: bool = True,
     is_transposed: bool = False,
 ):
@@ -83,6 +83,7 @@ class Decoder(nn.Module):
         norm_name: tuple | str,
         act_name: tuple | str = ("leakyrelu", {"inplace": True, "negative_slope": 0.01}),
         dropout: tuple | str | float | None = None,
+        conv_only=False,
     ):
         super().__init__()
         self.conv1 = get_conv_layer(
@@ -94,7 +95,7 @@ class Decoder(nn.Module):
             norm=norm_name,
             act=act_name,
             dropout=dropout,
-            conv_only=False,
+            conv_only=conv_only,
             is_transposed=True,
         )
 

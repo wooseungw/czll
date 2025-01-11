@@ -118,7 +118,7 @@ class UNet(nn.Module):
         self.decoder3 = Decoder(
             spatial_dims,
             channels[3] + channels[2],
-            channels[2],
+            channels[1],
             up_kernel_size,
             strides[2],
             norm,
@@ -127,8 +127,8 @@ class UNet(nn.Module):
         )
         self.decoder2 = Decoder(
             spatial_dims,
-            channels[2] + channels[1],
-            channels[1],
+            channels[1] + channels[1],
+            channels[0],
             up_kernel_size,
             strides[1],
             norm,
@@ -137,25 +137,12 @@ class UNet(nn.Module):
         )
         self.decoder1 = Decoder(
             spatial_dims,
-            channels[1] + channels[0],
-            channels[0],
+            channels[0] + channels[0],
+            out_channels,
             up_kernel_size,
             strides[0],
-            norm,
-            act,
-            dropout,
-        )
-
-        # 마지막 출력
-        self.out = get_conv_layer(
-            spatial_dims,
-            channels[0],
-            out_channels,
-            kernel_size=1,
-            stride=1,
-            dropout=dropout,
-            bias=bias,
             conv_only=True,
+            norm_name=None,
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -168,7 +155,7 @@ class UNet(nn.Module):
         x = self.decoder3(x4, x3)
         x = self.decoder2(x, x2)
         x = self.decoder1(x, x1)
-        x = self.out(x)
+
         return x
 
 
