@@ -44,12 +44,12 @@ class c_Decoder(nn.Module):
             conv_only=conv_only,
             is_transposed=True,
         )
-        self.cbam = CBAM3D(channels=in_channels, reduction=8, spatial_kernel_size=3)
+        self.cbam = CBAM3D(channels=out_channels, reduction=8, spatial_kernel_size=3)
 
     def forward(self, x, skip):
         x = torch.cat([x, skip], dim=1)
-        x = self.cbam(x)
         x = self.conv1(x)
+        x = self.cbam(x)
         
         return x
 
@@ -145,11 +145,11 @@ class UNet_CBAM(nn.Module):
             dropout,
         )
 
-        self.cbam = CBAM3D(channels=channels[3], reduction=8, spatial_kernel_size=3)
+        # self.cbam = CBAM3D(channels=channels[3], reduction=8, spatial_kernel_size=3)
         # ---------------------
         # Decoder
         # ---------------------
-        self.decoder3 = Decoder(
+        self.decoder3 = c_Decoder(
             spatial_dims,
             channels[3] + channels[2],
             channels[1],
@@ -159,7 +159,7 @@ class UNet_CBAM(nn.Module):
             act,
             dropout,
         )
-        self.decoder2 = Decoder(
+        self.decoder2 = c_Decoder(
             spatial_dims,
             channels[1] + channels[1],
             channels[0],
@@ -169,7 +169,7 @@ class UNet_CBAM(nn.Module):
             act,
             dropout,
         )
-        self.decoder1 = Decoder(
+        self.decoder1 = c_Decoder(
             spatial_dims,
             channels[0] + channels[0],
             out_channels,
@@ -185,7 +185,7 @@ class UNet_CBAM(nn.Module):
         x3 = self.encoder3(x2)
         
         x4 = self.bottleneck(x3)
-        x4 = self.cbam(x4)
+        # x4 = self.cbam(x4)
 
         x = self.decoder3(x4, x3)
         x = self.decoder2(x, x2)
