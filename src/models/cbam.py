@@ -61,7 +61,7 @@ class SpatialAttention3D(nn.Module):
             spatial_dims=3,
             in_channels=2,    # 평균풀링, 최대풀링을 합친 2채널
             out_channels=1,
-            kernel_size=3,    # 필요시 7이나 다른 값으로 변경
+            kernel_size=7,    # 필요시 7이나 다른 값으로 변경
             bias=False
         )
 
