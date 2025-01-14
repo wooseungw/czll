@@ -77,7 +77,7 @@ def create_inference_dataloader(img_dir, label_dir, non_random_transforms=None, 
     image = np.load(img_dir)
     data.append({"image": image})
     
-    ds = CacheDataset(data=data, transform=non_random_transforms, cache_rate=1.0)
+    ds = CacheDataset(data=data, transform=non_random_transforms, cache_rate=0.9)
     loader = DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     
     return loader    
@@ -158,11 +158,6 @@ if __name__ ==  "__main__":
         RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=1),
         RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=2),
     ])
-
-
-    # CSV 생성
-    create_csv(train_img_dir, train_label_dir, train_csv)
-    create_csv(val_img_dir, val_label_dir, val_csv)
 
     # 데이터 로더 생성
     train_loader, val_loader = create_dataloaders_from_csv(
