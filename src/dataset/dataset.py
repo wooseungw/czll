@@ -67,13 +67,14 @@ def create_dataloaders_bw(train_img_dir,
                        non_random_transforms=None,
                        val_non_random_transforms=None,
                        random_transforms=None,
+                       val_random_transforms=None,
                        batch_size=16,
                        num_workers=4,
                        train_num_repeat=1
                        ):
     
     train_loader = make_dataloader(train_img_dir, train_label_dir, non_random_transforms, random_transforms, batch_size, num_workers,train_num_repeat)
-    val_loader = make_dataloader(val_img_dir, val_label_dir, val_non_random_transforms, random_transforms, batch_size, num_workers)
+    val_loader = make_dataloader(val_img_dir, val_label_dir, val_non_random_transforms, val_random_transforms, batch_size, num_workers)
     
     return train_loader, val_loader
 
