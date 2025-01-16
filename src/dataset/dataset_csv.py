@@ -77,7 +77,7 @@ def create_inference_dataloader(img_dir, label_dir, non_random_transforms=None, 
     image = np.load(img_dir)
     data.append({"image": image})
     
-    ds = CacheDataset(data=data, transform=non_random_transforms, cache_rate=0.9)
+    ds = CacheDataset(data=data, transform=non_random_transforms, cache_rate=0.8)
     loader = DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     
     return loader    
@@ -115,12 +115,15 @@ def make_dataloader_from_csv(csv_file, non_random_transforms=None, random_transf
 def create_dataloaders_from_csv(train_csv, 
                                 val_csv, 
                                 non_random_transforms=None,
-                                random_transforms=None,
+                                train_random_transforms=None,
+                                val_random_transforms=None,
                                 batch_size=16,
                                 num_workers=4,
-                                train_num_repeat=3):
-    train_loader = make_dataloader_from_csv(train_csv, non_random_transforms, random_transforms, batch_size, num_workers, train_num_repeat)
-    val_loader = make_dataloader_from_csv(val_csv, non_random_transforms, random_transforms, batch_size, num_workers)
+                                train_num_repeat=3,
+                                val_num_repeat=4):
+    train_loader = make_dataloader_from_csv(train_csv, non_random_transforms, train_random_transforms, batch_size, num_workers, train_num_repeat)
+    val_loader = make_dataloader_from_csv(val_csv, non_random_transforms, val_random_transforms, batch_size, num_workers, val_num_repeat)
+    
     
     return train_loader, val_loader
 
