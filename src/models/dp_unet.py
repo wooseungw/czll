@@ -115,7 +115,7 @@ class DP_UNet(nn.Module):
         # ---------------------
         # Decoder
         # ---------------------
-        self.decoder3 = DP_Decoder(
+        self.decoder3 = Decoder(
             spatial_dims,
             channels[3] + channels[2],
             channels[1],
@@ -125,7 +125,7 @@ class DP_UNet(nn.Module):
             act,
             dropout,
         )
-        self.decoder2 = DP_Decoder(
+        self.decoder2 = Decoder(
             spatial_dims,
             channels[1] + channels[1],
             channels[0],
@@ -135,7 +135,7 @@ class DP_UNet(nn.Module):
             act,
             dropout,
         )
-        self.decoder1 = DP_Decoder(
+        self.decoder1 = Decoder(
             spatial_dims,
             channels[0] + channels[0],
             out_channels,
