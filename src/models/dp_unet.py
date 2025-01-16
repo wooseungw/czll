@@ -14,7 +14,7 @@ import torch.nn as nn
 # from monai.networks.layers.simplelayers import SkipConnection
 from monai.networks.layers.factories import Act, Norm
 
-from .unet_block import DP_Encoder, DP_Decoder
+from .unet_block import DP_Encoder, DP_Decoder, Decoder
 
 # __all__ = ["UNet"]  # "Unet" 제거
 

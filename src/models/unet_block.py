@@ -74,7 +74,7 @@ def get_dp_conv_layer(
         dropout=dropout,
         groups=in_channels,
         bias=bias,
-        conv_only=conv_only,
+        conv_only=True,
         is_transposed=is_transposed,
         padding=padding,
         output_padding=output_padding,
