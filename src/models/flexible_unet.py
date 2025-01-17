@@ -355,8 +355,8 @@ class FlexibleUNet(nn.Module):
         skip_connections: dict[int, list[int]] | None = None,
         kernel_size: int | Sequence[int] = 3,
         up_kernel_size: int | Sequence[int] = 3,
-        act: tuple | str = Act.PRELU,
-        norm: tuple | str = Norm.INSTANCE,
+        act: tuple | str = Act.LEAKYRELU,
+        norm: tuple | str = Norm.BATCH,
         dropout: float = 0.0,
         bias: bool = True,
     ):
@@ -463,23 +463,23 @@ class FlexibleUNet(nn.Module):
 # -------------------------
 if __name__ == "__main__":
     # 인코더
-    enc_channels = (16, 32, 64)   # 3단 인코더 마지막 출력은 항상 Stride=1
+    enc_channels = (32,64,128,256)   # 3단 인코더 마지막 출력은 항상 Stride=1
     enc_strides = (2, 2)         # 2개 스트라이드
-    num_layers_enc = (1, 1, 2)   # 각 인코더 블록당 2 레이어
+    num_layers_enc = (1, 1, 1,2)   # 각 인코더 블록당 2 레이어
 
     # 디코더
-    dec_channels = (120, 40)  # 디코더 채널은 임의로 설정
-    dec_strides = (2, 2)       # 3단 디코더, 각각 stride=2
-    num_layers_dec = (2, 2)
+    dec_channels = (80, 80,80)  # 디코더 채널은 임의로 설정
+    dec_strides = (2, 2,2)       # 3단 디코더, 각각 stride=2
+    num_layers_dec = (2, 2,2)
 
     # skip 연결: 
     #   디코더 0번 -> 인코더 2번 출력
     #   디코더 1번 -> 인코더 1번 출력
     #   디코더 2번 -> 인코더 0번 출력
     skip_map = {
-        0: [2,1],
+        0: [0],
         1: [1],
-        2: [0],
+        2: [2,1,0],
     }
 
     net = FlexibleUNet(
@@ -496,7 +496,7 @@ if __name__ == "__main__":
         kernel_size=3,
         up_kernel_size=3,
         act=Act.LEAKYRELU,
-        norm=Norm.LAYER,
+        norm=Norm.BATCH,
         dropout=0.0,
         bias=True,
     )
