@@ -312,6 +312,7 @@ class SingleDecoderBlock(nn.Module):
         out_main = self.main_up(x_main)  # (N, core_channels, ...)
         print("Main up shape:", out_main.shape)
         cat_list = [out_main]
+        print("Skip tensors:", [s.shape for s in skip_tensors])
         for i, s in enumerate(skip_tensors):
             aligned_s = self.skip_aligners[i](s, out_main)
             print(f"Skip {i} shape:", aligned_s.shape)
@@ -469,8 +470,8 @@ class FlexibleUNet(nn.Module):
 
         # 2) 디코더
         decoder_outputs = []
-        out = encoder_outputs[-1]  # bottleneck
-        decoder_outputs.append(out)  # 0번 디코더가 시작하기 전(bottleneck)에 쓸 수도 있지만, 여기선 i=0부터 맞춰줄 수도 있음.
+        # out = encoder_outputs[-1]  # bottleneck
+        # decoder_outputs.append(out)  # 0번 디코더가 시작하기 전(bottleneck)에 쓸 수도 있지만, 여기선 i=0부터 맞춰줄 수도 있음.
 
         for dec_i, dec_block in enumerate(self.decoder_blocks):
             # skip에 "enc" => encoder_outputs, "dec" => decoder_outputs
@@ -516,8 +517,8 @@ if __name__ == "__main__":
     # 반드시 "dec", j => j < i 여야함
     skip_map = {
         0: [("enc", 2)],       # 디코더0 => 인코더2
-        1: [("enc", 1), ("dec", 0)],  # 디코더1 => 인코더1 + 디코더0
-        2: [("enc", 0), ("dec", 1)]   # 디코더2 => 인코더0 + 디코더1
+        1: [("enc", 3), ("enc", 1)],  # 디코더1 => 인코더1 + 디코더0
+        2: [("enc", 3), ("dec", 0), ("enc", 0)]   # 디코더2 => 인코더0 + 디코더1
     }
 
     net = FlexibleUNet(
