@@ -246,7 +246,7 @@ class SingleDecoderBlock(nn.Module):
         main_in_channels: int,
         core_channels: int,
         out_channels: int,
-        skip_in_channels_list: list[int],  # 여러 skip 텐서에 대한 in_channels
+        skip_in_channels_list: list[int],
         num_layers: int,
         kernel_size: int | Sequence[int],
         stride: int | Sequence[int],
@@ -262,22 +262,13 @@ class SingleDecoderBlock(nn.Module):
         self.out_channels = out_channels
         self.skip_count = len(skip_in_channels_list)
         
-        # (1) 메인 업샘플: ConvTranspose
-        self.main_up = get_conv_layer(
-            spatial_dims=spatial_dims,
-            in_channels=main_in_channels,
-            out_channels=core_channels,
-            kernel_size=kernel_size,
-            stride=stride,
-            act=act,
-            norm=norm,
-            dropout=dropout,
-            bias=bias,
-            conv_only=False,
-            is_transposed=True,
-        )
-
-        # (2) skip aligners (스킵 개수만큼)
+        # (1) Main input channel aligner (1x1 conv로 core_channels로 맞춤)
+        if spatial_dims == 3:
+            self.main_aligner = nn.Conv3d(main_in_channels, core_channels, kernel_size=1, bias=True)
+        else:
+            self.main_aligner = nn.Conv2d(main_in_channels, core_channels, kernel_size=1, bias=True)
+        
+        # (2) Skip aligners (채널 매칭을 위한)
         self.skip_aligners = nn.ModuleList()
         for s_in_ch in skip_in_channels_list:
             aligner = SkipAlign(
@@ -290,38 +281,44 @@ class SingleDecoderBlock(nn.Module):
             )
             self.skip_aligners.append(aligner)
 
-        # (3) post_conv_stack
-        #    -> concat 후 채널:  core_channels * (1 + skip_count)
-        #    -> 최종 out_channels로 변환
-        self.post_conv_stack = build_conv_stack(
+        # (3) Main conv stack with transposed conv
+        total_in_channels = core_channels * (1 + self.skip_count)  # main(core_ch) + skips(core_ch each)
+        
+        
+        self.conv_stack = build_conv_stack(
             spatial_dims=spatial_dims,
-            in_channels=core_channels * (1 + self.skip_count),
+            in_channels=total_in_channels,
             out_channels=out_channels,
-            num_layers=max(num_layers, 0),
+            num_layers=num_layers,  # Already used one layer for upsampling
             kernel_size=kernel_size,
             stride=1,
             act=act,
             norm=norm,
             dropout=dropout,
             bias=bias,
-            is_transposed=False,
+            is_transposed=True,
         )
 
     def forward(self, x_main: torch.Tensor, skip_tensors: list[torch.Tensor]) -> torch.Tensor:
-        
-        out_main = self.main_up(x_main)  # (N, core_channels, ...)
-        
-        cat_list = [out_main]
+        # (1) Main input을 core_channels로 변환
+        x_main = self.main_aligner(x_main)  # (N, core_channels, ...)
+        print("x_main :", x_main.shape)
+        # (2) 모든 skip connection을 현재 입력 크기로 맞춤
+        aligned_skips = []
         
         for i, s in enumerate(skip_tensors):
-            aligned_s = self.skip_aligners[i](s, out_main)
-            
-            cat_list.append(aligned_s)
-
-        cat_input = torch.cat(cat_list, dim=1)  # (N, core_channels*(1+skip_count), ...)
+            print("skip_tensor :", s.shape)
+            aligned_s = self.skip_aligners[i](s, x_main)  # (N, core_channels, ...)
+            aligned_skips.append(aligned_s)
+            print(aligned_s.shape)
         
-        out = self.post_conv_stack(cat_input)   # (N, out_channels, ...)
+        # (3) Concatenate main input with aligned skips
+        cat_list = [x_main] + aligned_skips
+        cat_input = torch.cat(cat_list, dim=1)  # (N, core_channels * (1 + skip_count), ...)
         
+        # (4) Apply transposed conv for upsampling
+        out = self.conv_stack(cat_input)
+        print("++++++++++")
         return out
 
 
@@ -546,4 +543,4 @@ if __name__ == "__main__":
     x = torch.randn((1, 1, 64, 64, 32), device=device)
     with torch.no_grad():
         out = net(x)
-    
+        print(out.shape)
