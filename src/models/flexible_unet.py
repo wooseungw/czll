@@ -261,7 +261,7 @@ class SingleDecoderBlock(nn.Module):
         self.spatial_dims = spatial_dims
         self.out_channels = out_channels
         self.skip_count = len(skip_in_channels_list)
-        print(f"Skip count: {self.skip_count}")
+        
         # (1) 메인 업샘플: ConvTranspose
         self.main_up = get_conv_layer(
             spatial_dims=spatial_dims,
@@ -308,20 +308,20 @@ class SingleDecoderBlock(nn.Module):
         )
 
     def forward(self, x_main: torch.Tensor, skip_tensors: list[torch.Tensor]) -> torch.Tensor:
-        print("Main input shape:", x_main.shape)
+        
         out_main = self.main_up(x_main)  # (N, core_channels, ...)
-        print("Main up shape:", out_main.shape)
+        
         cat_list = [out_main]
-        print("Skip tensors:", [s.shape for s in skip_tensors])
+        
         for i, s in enumerate(skip_tensors):
             aligned_s = self.skip_aligners[i](s, out_main)
-            print(f"Skip {i} shape:", aligned_s.shape)
+            
             cat_list.append(aligned_s)
 
         cat_input = torch.cat(cat_list, dim=1)  # (N, core_channels*(1+skip_count), ...)
-        print("Cat input shape:", cat_input.shape)
+        
         out = self.post_conv_stack(cat_input)   # (N, out_channels, ...)
-        print("Post conv shape:", out.shape)
+        
         return out
 
 
@@ -420,7 +420,7 @@ class FlexibleUNet(nn.Module):
                     skip_in_channels_list.append(decoder_channels[idx])
                 else:
                     raise ValueError(f"Invalid skip type: {typ}, must be 'enc' or 'dec'.")
-            print(f"Decoder {dec_i} skip channels:", skip_in_channels_list)
+            
             block = SingleDecoderBlock(
                 spatial_dims=spatial_dims,
                 main_in_channels=main_in_ch,
@@ -546,4 +546,4 @@ if __name__ == "__main__":
     x = torch.randn((1, 1, 64, 64, 32), device=device)
     with torch.no_grad():
         out = net(x)
-    print("Output shape:", out.shape)
+    
