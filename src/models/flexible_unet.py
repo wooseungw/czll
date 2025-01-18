@@ -8,13 +8,14 @@ import numpy as np
 from monai.networks.blocks.convolutions import Convolution
 from monai.networks.layers.factories import Act, Norm
 
-# ------------------------------------------------------------------------
-# (1) LayerNorm3D (옵션): 3D 텐서에 LayerNorm 적용 필요 시 사용
-# ------------------------------------------------------------------------
+# ---------------------------
+# 1) LayerNorm3D (옵션)
+# ---------------------------
 class LayerNorm3D(nn.Module):
     def __init__(self, num_channels: int):
         super().__init__()
         self.layer_norm = nn.LayerNorm(num_channels)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         N, C, *spatial_dims = x.shape
         x = x.permute(0, 2, 3, 4, 1).contiguous()
@@ -23,9 +24,9 @@ class LayerNorm3D(nn.Module):
         return x
 
 
-# ------------------------------------------------------------------------
-# (2) Helpler: padding 계산
-# ------------------------------------------------------------------------
+# ---------------------------
+# 2) 헬퍼 함수: padding 계산
+# ---------------------------
 def get_padding(kernel_size: Sequence[int] | int, stride: Sequence[int] | int):
     kernel_size_np = np.atleast_1d(kernel_size)
     stride_np = np.atleast_1d(stride)
@@ -35,9 +36,7 @@ def get_padding(kernel_size: Sequence[int] | int, stride: Sequence[int] | int):
     padding = tuple(int(p) for p in padding_np)
     return padding if len(padding) > 1 else padding[0]
 
-def get_output_padding(
-    kernel_size: Sequence[int] | int, stride: Sequence[int] | int, padding: Sequence[int] | int
-):
+def get_output_padding(kernel_size, stride, padding):
     kernel_size_np = np.atleast_1d(kernel_size)
     stride_np = np.atleast_1d(stride)
     padding_np = np.atleast_1d(padding)
@@ -48,15 +47,15 @@ def get_output_padding(
     return out_padding if len(out_padding) > 1 else out_padding[0]
 
 
-# ------------------------------------------------------------------------
-# (3) get_conv_layer: MONAI Convolution + LayerNorm3D 등 처리
-# ------------------------------------------------------------------------
+# ---------------------------
+# 3) get_conv_layer
+# ---------------------------
 def get_conv_layer(
     spatial_dims: int,
     in_channels: int,
     out_channels: int,
-    kernel_size: Sequence[int] | int = 3,
-    stride: Sequence[int] | int = 1,
+    kernel_size: int | Sequence[int] = 3,
+    stride: int | Sequence[int] = 1,
     act: tuple | str | None = Act.PRELU,
     norm: tuple | str | None = Norm.INSTANCE,
     dropout: float | None = 0.0,
@@ -90,9 +89,9 @@ def get_conv_layer(
     )
 
 
-# ------------------------------------------------------------------------
-# (4) Upsample 레이어 (nn.Upsample)
-# ------------------------------------------------------------------------
+# ---------------------------
+# 4) ResizeLayer(nn.Upsample)
+# ---------------------------
 class ResizeLayer(nn.Module):
     def __init__(self, mode="trilinear", align_corners=False):
         super().__init__()
@@ -104,9 +103,9 @@ class ResizeLayer(nn.Module):
         return up(x)
 
 
-# ------------------------------------------------------------------------
-# (5) SkipAlign: Upsample + optional 1x1 Conv
-# ------------------------------------------------------------------------
+# ---------------------------
+# 5) SkipAlign
+# ---------------------------
 class SkipAlign(nn.Module):
     def __init__(
         self,
@@ -123,7 +122,6 @@ class SkipAlign(nn.Module):
 
         self.upsample = ResizeLayer(mode=mode, align_corners=align_corners)
 
-        # 1×1 Conv (채널 매칭)
         if channel_match and (skip_in_channels != out_channels):
             if spatial_dims == 3:
                 self.conv1x1 = nn.Conv3d(skip_in_channels, out_channels, kernel_size=1, bias=True)
@@ -133,12 +131,11 @@ class SkipAlign(nn.Module):
             self.conv1x1 = None
 
     def forward(self, skip_tensor: torch.Tensor, target_tensor: torch.Tensor) -> torch.Tensor:
-        # device/dtype 맞춤
         device = target_tensor.device
         dtype = target_tensor.dtype
         skip_tensor = skip_tensor.to(device=device, dtype=dtype)
 
-        # Upsample
+        # 업샘플
         D_out, H_out, W_out = target_tensor.shape[2:]
         if skip_tensor.shape[2:] != (D_out, H_out, W_out):
             skip_tensor = self.upsample(skip_tensor, (D_out, H_out, W_out))
@@ -150,16 +147,16 @@ class SkipAlign(nn.Module):
         return skip_tensor
 
 
-# ------------------------------------------------------------------------
-# (6) build_conv_stack: 여러 Conv/ConvTranspose를 쌓는 헬퍼
-# ------------------------------------------------------------------------
+# ---------------------------
+# 6) build_conv_stack
+# ---------------------------
 def build_conv_stack(
     spatial_dims: int,
     in_channels: int,
     out_channels: int,
     num_layers: int,
-    kernel_size: Sequence[int] | int,
-    stride: Sequence[int] | int,
+    kernel_size: int | Sequence[int],
+    stride: int | Sequence[int],
     act: tuple | str | None,
     norm: tuple | str | None,
     dropout: float,
@@ -203,9 +200,9 @@ def build_conv_stack(
     return nn.Sequential(*layers)
 
 
-# ------------------------------------------------------------------------
-# (7) SingleEncoderBlock
-# ------------------------------------------------------------------------
+# ---------------------------
+# 7) SingleEncoderBlock
+# ---------------------------
 class SingleEncoderBlock(nn.Module):
     def __init__(
         self,
@@ -213,8 +210,8 @@ class SingleEncoderBlock(nn.Module):
         in_channels: int,
         out_channels: int,
         num_layers: int,
-        kernel_size: Sequence[int] | int,
-        stride: Sequence[int] | int,
+        kernel_size: int | Sequence[int],
+        stride: int | Sequence[int],
         act: tuple | str | None,
         norm: tuple | str | None,
         dropout: float,
@@ -234,28 +231,25 @@ class SingleEncoderBlock(nn.Module):
             bias=bias,
             is_transposed=False,
         )
+
     def forward(self, x):
         return self.stack(x)
 
 
-# ------------------------------------------------------------------------
-# (8) SingleDecoderBlock
-# ------------------------------------------------------------------------
+# ---------------------------
+# 8) SingleDecoderBlock
+# ---------------------------
 class SingleDecoderBlock(nn.Module):
-    """
-    - __init__ 시점에 main_up(ConvTranspose), skip_aligners(스킵 개수만큼), post_conv_stack 생성
-    - forward에서 호출만 수행
-    """
     def __init__(
         self,
         spatial_dims: int,
         main_in_channels: int,
         core_channels: int,
         out_channels: int,
-        skip_in_channels_list: list[int],  # 스킵 텐서들의 in_channels
+        skip_in_channels_list: list[int],  # 여러 skip 텐서에 대한 in_channels
         num_layers: int,
-        kernel_size: Sequence[int] | int,
-        stride: Sequence[int] | int,
+        kernel_size: int | Sequence[int],
+        stride: int | Sequence[int],
         act: tuple | str | None,
         norm: tuple | str | None,
         dropout: float,
@@ -268,7 +262,7 @@ class SingleDecoderBlock(nn.Module):
         self.out_channels = out_channels
         self.skip_count = len(skip_in_channels_list)
         print(f"Skip count: {self.skip_count}")
-        # 1) main_up
+        # (1) 메인 업샘플: ConvTranspose
         self.main_up = get_conv_layer(
             spatial_dims=spatial_dims,
             in_channels=main_in_channels,
@@ -283,8 +277,7 @@ class SingleDecoderBlock(nn.Module):
             is_transposed=True,
         )
 
-        # 2) skip aligners
-        # skip_in_channels_list 크기만큼 SkipAlign
+        # (2) skip aligners (스킵 개수만큼)
         self.skip_aligners = nn.ModuleList()
         for s_in_ch in skip_in_channels_list:
             aligner = SkipAlign(
@@ -297,12 +290,14 @@ class SingleDecoderBlock(nn.Module):
             )
             self.skip_aligners.append(aligner)
 
-        # 3) post_conv_stack
+        # (3) post_conv_stack
+        #    -> concat 후 채널:  core_channels * (1 + skip_count)
+        #    -> 최종 out_channels로 변환
         self.post_conv_stack = build_conv_stack(
             spatial_dims=spatial_dims,
-            in_channels=core_channels * (1 + self.skip_count),  # concat 후 1×1 Conv로 out_channels 만든다고 가정
+            in_channels=core_channels * (1 + self.skip_count),
             out_channels=out_channels,
-            num_layers=max(num_layers - 1, 0),
+            num_layers=max(num_layers, 0),
             kernel_size=kernel_size,
             stride=1,
             act=act,
@@ -313,29 +308,35 @@ class SingleDecoderBlock(nn.Module):
         )
 
     def forward(self, x_main: torch.Tensor, skip_tensors: list[torch.Tensor]) -> torch.Tensor:
-        out_main = self.main_up(x_main)
-
+        print("Main input shape:", x_main.shape)
+        out_main = self.main_up(x_main)  # (N, core_channels, ...)
+        print("Main up shape:", out_main.shape)
         cat_list = [out_main]
-        # skip_tensors 개수 == skip_aligners 개수
         for i, s in enumerate(skip_tensors):
             aligned_s = self.skip_aligners[i](s, out_main)
-            print(aligned_s.shape)
+            print(f"Skip {i} shape:", aligned_s.shape)
             cat_list.append(aligned_s)
 
-        cat_input = torch.cat(cat_list, dim=1)
-
-        out = self.post_conv_stack(cat_input)
+        cat_input = torch.cat(cat_list, dim=1)  # (N, core_channels*(1+skip_count), ...)
+        print("Cat input shape:", cat_input.shape)
+        out = self.post_conv_stack(cat_input)   # (N, out_channels, ...)
+        print("Post conv shape:", out.shape)
         return out
 
 
-# ------------------------------------------------------------------------
-# (9) FlexibleUNet
-# ------------------------------------------------------------------------
+# ---------------------------
+# 9) FlexibleUNet
+# ---------------------------
 class FlexibleUNet(nn.Module):
     """
-    - __init__ 시점에 인코더 블록 생성
-    - __init__ 시점에 디코더 블록 생성 -> skip_in_channels_list를 미리 계산
-    - forward에서 실행
+    디코더 간 스킵 연결:
+      skip_connections = {
+         dec_idx: [
+           ("enc", enc_i),  # 인코더 레벨 enc_i
+           ("dec", dec_j),  # 디코더 레벨 dec_j
+         ],
+         ...
+      }
     """
     def __init__(
         self,
@@ -349,9 +350,9 @@ class FlexibleUNet(nn.Module):
         decoder_strides: Sequence[int] = (2, 2, 2),
         num_layers_encoder: Sequence[int] = (1, 1, 1, 1),
         num_layers_decoder: Sequence[int] = (1, 1, 1),
-        skip_connections: dict[int, list[int]] | None = None,
-        kernel_size: Sequence[int] | int = 3,
-        up_kernel_size: Sequence[int] | int = 3,
+        skip_connections: dict[int, list[tuple[str, int]]] | None = None,
+        kernel_size: int | Sequence[int] = 3,
+        up_kernel_size: int | Sequence[int] = 3,
         act: tuple | str = Act.LEAKYRELU,
         norm: tuple | str = Norm.BATCH,
         dropout: float = 0.0,
@@ -359,6 +360,12 @@ class FlexibleUNet(nn.Module):
         mode: str = "trilinear",
         align_corners: bool = False,
     ):
+        """
+        skip_connections: {
+          decoder_index: [("enc", i), ("dec", j), ...],
+          ...
+        }
+        """
         super().__init__()
         if len(encoder_channels) != len(num_layers_encoder):
             raise ValueError("encoder_channels와 num_layers_encoder 길이가 맞지 않습니다.")
@@ -372,7 +379,7 @@ class FlexibleUNet(nn.Module):
         self.spatial_dims = spatial_dims
         self.skip_connections = skip_connections if skip_connections else {}
 
-        # ---------------------- 인코더 생성 ----------------------
+        # ---------------------- 인코더 구성 ----------------------
         self.encoder_blocks = nn.ModuleList()
         prev_ch = in_channels
         for i, out_ch in enumerate(encoder_channels):
@@ -392,19 +399,27 @@ class FlexibleUNet(nn.Module):
             self.encoder_blocks.append(block)
             prev_ch = out_ch
 
-        # ---------------------- 디코더 생성 ----------------------
+        # ---------------------- 디코더 구성 ----------------------
         self.decoder_blocks = nn.ModuleList()
-        main_in_ch = encoder_channels[-1]  # bottleneck out
+        main_in_ch = encoder_channels[-1]  # bottleneck
         for dec_i in range(len(decoder_channels)):
             out_ch = decoder_channels[dec_i]
             stride = decoder_strides[dec_i]
             nlayer = num_layers_decoder[dec_i]
 
             # skip 인덱스 -> skip_in_channels
-            # 예) skip_connections[0] = [2, 1] -> skip_in_channels_list = [encoder_channels[2], encoder_channels[1]]
-            skip_idx_list = self.skip_connections.get(dec_i, [])
-            skip_in_channels_list = [encoder_channels[idx] for idx in skip_idx_list]
-
+            # "enc" -> encoder_channels[idx], "dec" -> decoder_channels[idx]
+            skip_info_list = skip_connections.get(dec_i, [])
+            skip_in_channels_list = []
+            for (typ, idx) in skip_info_list:
+                if typ == "enc":
+                    skip_in_channels_list.append(encoder_channels[idx])
+                elif typ == "dec":
+                    # 디코더 레벨 idx의 출력 채널
+                    skip_in_channels_list.append(decoder_channels[idx])
+                else:
+                    raise ValueError(f"Invalid skip type: {typ}, must be 'enc' or 'dec'.")
+            print(f"Decoder {dec_i} skip channels:", skip_in_channels_list)
             block = SingleDecoderBlock(
                 spatial_dims=spatial_dims,
                 main_in_channels=main_in_ch,
@@ -424,7 +439,7 @@ class FlexibleUNet(nn.Module):
             self.decoder_blocks.append(block)
             main_in_ch = out_ch
 
-        # ---------------------- 최종 Conv ----------------------
+        # 최종 Conv
         self.final_conv = get_conv_layer(
             spatial_dims=spatial_dims,
             in_channels=decoder_channels[-1],
@@ -440,49 +455,69 @@ class FlexibleUNet(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # device/dtype 통일
+        # device/dtype
         device = next(self.parameters()).device
         dtype = next(self.parameters()).dtype
         x = x.to(device=device, dtype=dtype)
 
-        # 인코더
+        # 1) 인코더
         encoder_outputs = []
         out = x
         for enc in self.encoder_blocks:
             out = enc(out)
             encoder_outputs.append(out)
 
-        # 디코더
+        # 2) 디코더
+        decoder_outputs = []
         out = encoder_outputs[-1]  # bottleneck
-        for dec_i, dec_block in enumerate(self.decoder_blocks):
-            print(f"Out {out.shape}")
-            # skip 인덱스
-            skip_idx_list = self.skip_connections.get(dec_i, [])
-            skip_list = [encoder_outputs[idx] for idx in skip_idx_list]
-            out = dec_block(out, skip_list)
+        decoder_outputs.append(out)  # 0번 디코더가 시작하기 전(bottleneck)에 쓸 수도 있지만, 여기선 i=0부터 맞춰줄 수도 있음.
 
-        # 최종
+        for dec_i, dec_block in enumerate(self.decoder_blocks):
+            # skip에 "enc" => encoder_outputs, "dec" => decoder_outputs
+            skip_info_list = self.skip_connections.get(dec_i, [])
+            skip_list = []
+            for (typ, idx) in skip_info_list:
+                if typ == "enc":
+                    skip_list.append(encoder_outputs[idx])
+                elif typ == "dec":
+                    # 디코더 idx는 0.. dec_i-1 범위여야함
+                    skip_list.append(decoder_outputs[idx])
+                else:
+                    raise ValueError(f"Invalid skip type: {typ}.")
+
+            out = dec_block(out, skip_list)
+            # 디코더 i번 블록 결과를 decoder_outputs에 저장
+            decoder_outputs.append(out)
+
+        # 3) 최종 Conv
         out = self.final_conv(out)
         return out
 
-# ------------------------------------------------------------------------
-# (10) Test
-# ------------------------------------------------------------------------
+
+# ---------------------------
+# 10) 테스트
+# ---------------------------
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    enc_channels = (32,64,128,256)
-    enc_strides = (2,2,2)
-    num_layers_enc = (1,1,1,1)
-    core_channels = 64
-    dec_channels = (128,64,32)
-    dec_strides = (2,2,2)
-    num_layers_dec = (1,1,1)
+    enc_channels = (32, 64, 128, 256)
+    enc_strides = (2, 2, 2)
+    num_layers_enc = (1, 1, 1, 1)
 
+    core_channels = 64
+    dec_channels = (128, 64, 32)
+    dec_strides = (2, 2, 2)
+    num_layers_dec = (1, 1, 1)
+
+    # 디코더간 스킵 예시:
+    #   디코더0: ("enc",2), ("dec", ?) -- 가능하지만 보통 dec_? < dec_0
+    #   디코더1: ("enc",1), ("dec",0)
+    #   디코더2: ("enc",0), ("dec",1)
+    # 반드시 "dec", j => j < i 여야함
     skip_map = {
-        0: [2,1],  # 디코더0 => 인코더2
-        1: [1],  # 디코더1 => 인코더1
-        2: [0],  # 디코더2 => 인코더0
+        0: [("enc", 2)],       # 디코더0 => 인코더2
+        1: [("enc", 1), ("dec", 0)],  # 디코더1 => 인코더1 + 디코더0
+        2: [("enc", 0), ("dec", 1)]   # 디코더2 => 인코더0 + 디코더1
     }
 
     net = FlexibleUNet(
@@ -491,6 +526,7 @@ if __name__ == "__main__":
         out_channels=2,
         encoder_channels=enc_channels,
         encoder_strides=enc_strides,
+        core_channels=core_channels,
         decoder_channels=dec_channels,
         decoder_strides=dec_strides,
         num_layers_encoder=num_layers_enc,
@@ -506,9 +542,7 @@ if __name__ == "__main__":
         align_corners=False,
     ).to(device)
 
-    print(net)
-
-    x = torch.randn(1, 1, 64, 64, 32).to(device)
+    x = torch.randn((1, 1, 64, 64, 32), device=device)
     with torch.no_grad():
-        y = net(x)
-    print("Output shape:", y.shape)  # ex) (1, 2, 64, 64, 32)
+        out = net(x)
+    print("Output shape:", out.shape)
