@@ -250,6 +250,7 @@ class SingleDecoderBlock(nn.Module):
         self,
         spatial_dims: int,
         main_in_channels: int,
+        core_channels: int,
         out_channels: int,
         skip_in_channels_list: list[int],  # 스킵 텐서들의 in_channels
         num_layers: int,
@@ -266,12 +267,12 @@ class SingleDecoderBlock(nn.Module):
         self.spatial_dims = spatial_dims
         self.out_channels = out_channels
         self.skip_count = len(skip_in_channels_list)
-
+        print(f"Skip count: {self.skip_count}")
         # 1) main_up
         self.main_up = get_conv_layer(
             spatial_dims=spatial_dims,
             in_channels=main_in_channels,
-            out_channels=out_channels,
+            out_channels=core_channels,
             kernel_size=kernel_size,
             stride=stride,
             act=act,
@@ -288,7 +289,7 @@ class SingleDecoderBlock(nn.Module):
         for s_in_ch in skip_in_channels_list:
             aligner = SkipAlign(
                 skip_in_channels=s_in_ch,
-                out_channels=out_channels,
+                out_channels=core_channels,
                 spatial_dims=spatial_dims,
                 channel_match=True,
                 mode=mode,
@@ -299,7 +300,7 @@ class SingleDecoderBlock(nn.Module):
         # 3) post_conv_stack
         self.post_conv_stack = build_conv_stack(
             spatial_dims=spatial_dims,
-            in_channels=out_channels,  # concat 후 1×1 Conv로 out_channels 만든다고 가정
+            in_channels=core_channels * (1 + self.skip_count),  # concat 후 1×1 Conv로 out_channels 만든다고 가정
             out_channels=out_channels,
             num_layers=max(num_layers - 1, 0),
             kernel_size=kernel_size,
@@ -318,19 +319,10 @@ class SingleDecoderBlock(nn.Module):
         # skip_tensors 개수 == skip_aligners 개수
         for i, s in enumerate(skip_tensors):
             aligned_s = self.skip_aligners[i](s, out_main)
+            print(aligned_s.shape)
             cat_list.append(aligned_s)
 
         cat_input = torch.cat(cat_list, dim=1)
-
-        # 1×1 Conv로 out_channels 정렬
-        in_ch = cat_input.shape[1]
-        if in_ch != self.out_channels:
-            device = cat_input.device
-            if self.spatial_dims == 3:
-                conv1x1 = nn.Conv3d(in_ch, self.out_channels, kernel_size=1, bias=True).to(device)
-            else:
-                conv1x1 = nn.Conv2d(in_ch, self.out_channels, kernel_size=1, bias=True).to(device)
-            cat_input = conv1x1(cat_input)
 
         out = self.post_conv_stack(cat_input)
         return out
@@ -352,6 +344,7 @@ class FlexibleUNet(nn.Module):
         out_channels: int = 2,
         encoder_channels: Sequence[int] = (32, 64, 128, 256),
         encoder_strides: Sequence[int] = (2, 2, 2),
+        core_channels: int = 64,
         decoder_channels: Sequence[int] = (128, 64, 32),
         decoder_strides: Sequence[int] = (2, 2, 2),
         num_layers_encoder: Sequence[int] = (1, 1, 1, 1),
@@ -416,6 +409,7 @@ class FlexibleUNet(nn.Module):
                 spatial_dims=spatial_dims,
                 main_in_channels=main_in_ch,
                 out_channels=out_ch,
+                core_channels=core_channels,
                 skip_in_channels_list=skip_in_channels_list,
                 num_layers=nlayer,
                 kernel_size=up_kernel_size,
@@ -461,6 +455,7 @@ class FlexibleUNet(nn.Module):
         # 디코더
         out = encoder_outputs[-1]  # bottleneck
         for dec_i, dec_block in enumerate(self.decoder_blocks):
+            print(f"Out {out.shape}")
             # skip 인덱스
             skip_idx_list = self.skip_connections.get(dec_i, [])
             skip_list = [encoder_outputs[idx] for idx in skip_idx_list]
@@ -479,13 +474,13 @@ if __name__ == "__main__":
     enc_channels = (32,64,128,256)
     enc_strides = (2,2,2)
     num_layers_enc = (1,1,1,1)
-
+    core_channels = 64
     dec_channels = (128,64,32)
     dec_strides = (2,2,2)
     num_layers_dec = (1,1,1)
 
     skip_map = {
-        0: [2],  # 디코더0 => 인코더2
+        0: [2,1],  # 디코더0 => 인코더2
         1: [1],  # 디코더1 => 인코더1
         2: [0],  # 디코더2 => 인코더0
     }
