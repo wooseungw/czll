@@ -291,7 +291,7 @@ class SingleDecoderBlock(nn.Module):
             out_channels=out_channels,
             num_layers=num_layers,  # Already used one layer for upsampling
             kernel_size=kernel_size,
-            stride=1,
+            stride=stride,
             act=act,
             norm=norm,
             dropout=dropout,
@@ -302,15 +302,14 @@ class SingleDecoderBlock(nn.Module):
     def forward(self, x_main: torch.Tensor, skip_tensors: list[torch.Tensor]) -> torch.Tensor:
         # (1) Main input을 core_channels로 변환
         x_main = self.main_aligner(x_main)  # (N, core_channels, ...)
-        print("x_main :", x_main.shape)
+        
         # (2) 모든 skip connection을 현재 입력 크기로 맞춤
         aligned_skips = []
         
         for i, s in enumerate(skip_tensors):
-            print("skip_tensor :", s.shape)
             aligned_s = self.skip_aligners[i](s, x_main)  # (N, core_channels, ...)
             aligned_skips.append(aligned_s)
-            print(aligned_s.shape)
+            
         
         # (3) Concatenate main input with aligned skips
         cat_list = [x_main] + aligned_skips
@@ -318,7 +317,7 @@ class SingleDecoderBlock(nn.Module):
         
         # (4) Apply transposed conv for upsampling
         out = self.conv_stack(cat_input)
-        print("++++++++++")
+    
         return out
 
 
