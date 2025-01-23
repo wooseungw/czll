@@ -29,14 +29,17 @@ class ChannelAttention3D(nn.Module):
         avg_pool = F.adaptive_avg_pool3d(x, (1, 1, 1)).view(b, f)  # (B, F)
         
         # 2) Global Max Pooling
-        max_pool = F.adaptive_max_pool3d(x, (1, 1, 1)).view(b, f)  # (B, F)
+        # max_pool = F.adaptive_max_pool3d(x, (1, 1, 1)).view(b, f)  # (B, F)
+        min_pool = -F.adaptive_max_pool3d(-x, (1, 1, 1)).view(b, f)  # (B, F)
         
         # 3) 각각 MLP 통과
         avg_out = self.mlp(avg_pool)  # (B, F)
-        max_out = self.mlp(max_pool)  # (B, F)
+        # max_out = self.mlp(max_pool)  # (B, F)
+        min_out = self.mlp(min_pool)
         
         # 4) 두 결과 더하고 시그모이드
-        out = torch.sigmoid(avg_out + max_out)  # (B, F)
+        # out = torch.sigmoid(avg_out + max_out)  # (B, F)
+        out = torch.sigmoid(avg_out + min_out)
         
         # 5) (B, F) -> (B, F, 1, 1, 1)
         out = out.view(b, f, 1, 1, 1)
@@ -71,10 +74,12 @@ class SpatialAttention3D(nn.Module):
         
         # 1) 채널 차원에 대한 평균 풀링, 최대 풀링
         avg_pool = torch.mean(x, dim=1, keepdim=True)        # (B, 1, D, W, H)
-        max_pool, _ = torch.max(x, dim=1, keepdim=True)      # (B, 1, D, W, H)
+        # max_pool, _ = torch.max(x, dim=1, keepdim=True)      # (B, 1, D, W, H)
+        min_pool, _ = torch.min(x, dim=1, keepdim=True)      # (B, 1, D, W, H)
         
         # 2) 채널 차원으로 합치기
-        cat = torch.cat([avg_pool, max_pool], dim=1)         # (B, 2, D, W, H)
+        # cat = torch.cat([avg_pool, max_pool], dim=1)         # (B, 2, D, W, H)
+        cat = torch.cat([avg_pool, min_pool], dim=1)         # (B, 2, D, W, H)
         
         # 3) 3D Conv + 시그모이드
         attention_map = torch.sigmoid(self.conv(cat))        # (B, 1, D, W, H)
