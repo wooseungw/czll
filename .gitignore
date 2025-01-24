@@ -19,7 +19,7 @@ renalStructures_UNEST_segmentation/
 denoised_datasets/
 denoised_output/
 CBAM_denoised_output/
-
+model_augmented_output/
 
 10441/
 10440/
