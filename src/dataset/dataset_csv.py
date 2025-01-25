@@ -99,7 +99,7 @@ def make_dataset_from_csv(csv_file, non_random_transforms=None, random_transform
         })
 
     # CacheDataset 생성
-    ds = CacheDataset(data=files, transform=non_random_transforms, cache_rate=1.0)
+    ds = CacheDataset(data=files, transform=non_random_transforms, cache_rate=0.8)
     ds = Dataset(data=ds, transform=random_transforms)
     
     return ds
@@ -114,15 +114,16 @@ def make_dataloader_from_csv(csv_file, non_random_transforms=None, random_transf
 
 def create_dataloaders_from_csv(train_csv, 
                                 val_csv, 
-                                non_random_transforms=None,
+                                train_non_random_transforms=None,
+                                val_non_random_transforms=None,
                                 train_random_transforms=None,
                                 val_random_transforms=None,
                                 batch_size=16,
                                 num_workers=4,
                                 train_num_repeat=3,
                                 val_num_repeat=4):
-    train_loader = make_dataloader_from_csv(train_csv, non_random_transforms, train_random_transforms, batch_size, num_workers, train_num_repeat)
-    val_loader = make_dataloader_from_csv(val_csv, non_random_transforms, val_random_transforms, batch_size, num_workers, val_num_repeat)
+    train_loader = make_dataloader_from_csv(train_csv, train_non_random_transforms, train_random_transforms, batch_size, num_workers, train_num_repeat)
+    val_loader = make_dataloader_from_csv(val_csv, val_non_random_transforms, val_random_transforms, batch_size, num_workers, val_num_repeat)
     
     
     return train_loader, val_loader
