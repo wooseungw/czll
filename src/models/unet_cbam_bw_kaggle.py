@@ -14,8 +14,8 @@ import torch.nn as nn
 # from monai.networks.layers.simplelayers import SkipConnection
 from monai.networks.layers.factories import Act, Norm
 
-from .unet_block import Encoder, Decoder, get_conv_layer
-from .cbam import CBAM3D
+from unet_block import Encoder, Decoder, get_conv_layer
+from cbam import CBAM3D
 
 
 class c_Decoder(nn.Module):
@@ -192,10 +192,10 @@ class UNet_CBAM_bw(nn.Module):
         x2 = self.encoder2(x1)
         x3 = self.encoder3(x2)
         
-        x4 = self.bottleneck(x3)
+        x = self.bottleneck(x3)
         # x4 = self.cbam(x4)
 
-        x = self.decoder3(x4, x3)
+        x = self.decoder3(x, x3)
         x = self.decoder2(x, x2)
         x = self.decoder1(x, x1)
 
