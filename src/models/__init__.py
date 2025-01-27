@@ -6,6 +6,7 @@ from .swincspunetr3plus import SwinCSPUNETR3plus
 from .mitcspunet import MiTCSPUnet, MiTUnet
 from .unet import UNet
 from .unet_cbam import UNet_CBAM
+from .unet_cbam_bw import UNet_CBAM_bw
 from .dp_unet import DP_UNet
 from .flexible_unet import FlexibleUNet
 
