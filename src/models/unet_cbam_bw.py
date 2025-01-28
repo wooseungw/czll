@@ -45,12 +45,12 @@ class c_Decoder(nn.Module):
             conv_only=conv_only,
             is_transposed=True,
         )
-        self.skip_cbam = CBAM3D(channels = skip_channels, reduction=8, spatial_kernel_size=3)
+        # self.skip_cbam = CBAM3D(channels = skip_channels, reduction=8, spatial_kernel_size=3)
         self.cbam = CBAM3D(channels = out_channels, reduction=8, spatial_kernel_size=3)
 
     def forward(self, x, skip):
         # print(x.shape, skip.shape)
-        skip = self.skip_cbam(skip)
+        # skip = self.skip_cbam(skip)
         # print(x.shape, skip.shape)
         x = torch.cat([x, skip], dim=1)
         x = self.conv1(x)

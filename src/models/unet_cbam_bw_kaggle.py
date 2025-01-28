@@ -15,7 +15,7 @@ import torch.nn as nn
 from monai.networks.layers.factories import Act, Norm
 
 from unet_block import Encoder, Decoder, get_conv_layer
-from cbam import CBAM3D
+from cbam_kaggle import CBAM3D
 
 
 class c_Decoder(nn.Module):
