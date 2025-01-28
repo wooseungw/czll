@@ -187,6 +187,17 @@ class UNet_CBAM_bw(nn.Module):
             norm_name=None,
         )
 
+        self.decoder0 = c_Decoder(
+            spatial_dims,
+            channels[0],
+            channels[0],
+            1,
+            up_kernel_size,
+            strides[0],
+            conv_only=True,
+            norm_name=None,
+        )
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x1 = self.encoder1(x)
         x2 = self.encoder2(x1)
@@ -197,9 +208,10 @@ class UNet_CBAM_bw(nn.Module):
 
         x = self.decoder3(x, x3)
         x = self.decoder2(x, x2)
-        x = self.decoder1(x, x1)
+        x_c = self.decoder1(x, x1)
+        x_score = self.decoder0(x, x1)
 
-        return x
+        return x_c, x_score
 
 if __name__ == "__main__":
     # strides를 4개로 늘림
