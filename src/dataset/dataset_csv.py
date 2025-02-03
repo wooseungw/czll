@@ -61,16 +61,18 @@ def create_train_val_csv(
         data.append({"image": image_path, "label": label_path})
 
     # Split into train and validation sets
-    train_data, val_data = train_test_split(data, test_size=test_size, random_state=random_state)
+    # train_data, val_data = train_test_split(data, test_size=test_size, random_state=random_state)
 
     # Save to CSV
     pd.DataFrame(data).to_csv(original_csv_path, index=False)
-    pd.DataFrame(train_data).to_csv(train_csv_path, index=False)
-    pd.DataFrame(val_data).to_csv(val_csv_path, index=False)
+    # pd.DataFrame(train_data).to_csv(train_csv_path, index=False)
+    # pd.DataFrame(val_data).to_csv(val_csv_path, index=False)
 
     print(f"Train CSV created at: {data}")
     print(f"Train CSV created at: {train_csv_path}")
     print(f"Validation CSV created at: {val_csv_path}")
+    
+    
 
 def create_inference_dataloader(img_dir, label_dir, non_random_transforms=None, random_transforms=None, batch_size=16, num_workers=4):
     data = []
@@ -97,7 +99,7 @@ def make_dataset_from_csv(csv_file, non_random_transforms=None, random_transform
             "image": np.load(row["image"]),  # CSV에서 'image' 경로로 .npy 파일 로드
             "label": np.load(row["label"])   # CSV에서 'label' 경로로 .npy 파일 로드
         })
-
+    print(files[0]["image"].shape)
     # CacheDataset 생성
     ds = CacheDataset(data=files, transform=non_random_transforms, cache_rate=0.8)
     ds = Dataset(data=ds, transform=random_transforms)
