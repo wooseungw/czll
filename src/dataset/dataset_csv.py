@@ -46,7 +46,7 @@ def create_train_val_csv(
         raise ValueError("Image or label directory does not exist in the dataset folder.")
 
     # Gather all files in the image directory
-    img_files = [f for f in os.listdir(image_dir) if f.endswith(file_extension)]
+    img_files = [f.replace("\\", "/") for f in os.listdir(image_dir) if f.endswith(file_extension)]
     data = []
 
     for img_file in img_files:
@@ -101,7 +101,7 @@ def make_dataset_from_csv(csv_file, non_random_transforms=None, random_transform
         })
     print(files[0]["image"].shape)
     # CacheDataset 생성
-    ds = CacheDataset(data=files, transform=non_random_transforms, cache_rate=0.8)
+    ds = CacheDataset(data=files, transform=non_random_transforms, cache_rate=0)
     ds = Dataset(data=ds, transform=random_transforms)
     
     return ds
